@@ -1,0 +1,133 @@
+   1 0000               #
+   2 0000               # FILE:         $Id$
+   3 0000               # AUTHOR:       Lachlan Bartle
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #	This program replicates a cross sums puzzle.
+   7 0000               #       This file is the main of that puzzle.
+   8 0000               
+   9 0000               #-------------------------------
+  10 0000               
+  11 0000               #
+  12 0000               # CONSTANTS
+  13 0000               #
+  14 0000               
+  15 0000               READ_INT =      5
+  16 0000               PRINT_INT =     1
+  17 0000               PRINT_STRING =  4
+  18 0000               EXIT = 	        10
+  19 0000               
+  20 0000               #-------------------------------
+  21 0000               
+  22 0000               #
+  23 0000               # DATA AREAS
+  24 0000               #
+  25 0000               
+  26 0000               	.data
+  27 0000               	.align  0
+  28 0000               size:
+  29 0000 00000000	        .word   0
+  30 0004                       
+  31 0004               board:
+  32 0004 00000000	        .space  1200
+          00000000
+          00000000
+          00000000
+          00000000
+          00000000
+  33 04b4                       
+  34 04b4               banner:
+  35 04b4 2A2A2A2A	        .ascii  "******************\n"
+          2A2A2A2A
+          2A2A2A2A
+          2A2A2A2A
+          2A2A0A  
+  36 04c7 2A2A2020	        .ascii  "**  CROSS SUMS  **\n"
+          43524F53
+          53205355
+          4D532020
+          2A2A0A  
+  37 04da 2A2A2A2A	        .asciiz "******************\n\n"
+          2A2A2A2A
+          2A2A2A2A
+          2A2A2A2A
+          2A2A0A0A
+          00      
+  38 04ef                       
+  39 04ef               init_board:
+  40 04ef 496E6974	        .asciiz "Initial Puzzle\n\n"
+          69616C20
+          50757A7A
+          6C650A0A
+          00      
+  41 0500                       
+  42 0500               #-------------------------------
+  43 0500               
+  44 0500               #
+  45 0500               # CODE AREAS
+  46 0500               #
+  47 0000               	.text			   
+  48 0000               	.align  2		   
+  49 0000                
+  50 0000                       .globl  main		   
+  51 0000                       .globl  cell
+  52 0000                       .globl  cell_val
+  53 0000                       .globl  empty_cell        
+  54 0000                       .globl  read_board
+  55 0000                       .globl  print_board
+  56 0000                       .globl  size
+  57 0000                       .globl  find_empty_cell
+  58 0000                       .globl  solve_puzzle
+  59 0000                       .globl  board
+  60 0000                       .globl  nl
+  61 0000               #
+  62 0000               # Name:         main
+  63 0000               #
+  64 0000               # Description:  EXECUTION BEGINS HERE
+  65 0000               #        
+  66 0000               
+  67 0000               main:
+  68 0000 23BDFFFC	        addi    $sp, $sp, -4      # Initialization
+  69 0004 AFBF0000	        sw      $ra, 0($sp)
+  70 0008                       # Print welcome banner
+  71 0008 34020004	        li      $v0, PRINT_STRING
+  72 000c 3C040000	        la      $a0, nl
+     0010 34840000
+  73 0014 0000000C	        syscall
+  74 0018 34020004	        li      $v0, PRINT_STRING
+  75 001c 3C040000	        la      $a0, banner
+     0020 34840000
+  76 0024 0000000C	        syscall
+  77 0028 0C000000	        jal     read_board        # Read puzzle
+  78 002c                       # Print initial game message
+  79 002c 34020004	        li      $v0, PRINT_STRING
+  80 0030 3C040000	        la      $a0, init_board
+     0034 34840000
+  81 0038 0000000C	        syscall
+  82 003c 0C000000	        jal     print_board        # Print the board
+  83 0040 0C000000	       	jal	find_empty_cell    # Get the next empty cell
+  84 0044 0C000000		jal	solve_puzzle       # solve the puzzle
+  85 0048 8FBF0000	        lw      $ra, 0($sp)        # Restore and return
+  86 004c 23BD0004	        addi    $sp, $sp, 4
+  87 0050 03E00008	        jr      $ra
+
+
+     Name        F  Value   M V Sect.    References
+---------------  - -------- - - ----- -----------------
+EXIT               0000000A =         @  18
+PRINT_INT          00000001 =         @  16
+PRINT_STRING       00000004 =         @  17, 71, 74, 79
+READ_INT           00000005 =         @  15
+banner             000004B4 R   data  @  34, 75
+board              00000004 R G data  @  31, 59
+cell               ******** X G       @  51
+cell_val           ******** X G       @  52
+empty_cell         ******** X G       @  53
+find_empty_cell    ******** X G       @  57, 83
+init_board         000004EF R   data  @  39, 80
+main               00000000 R G text  @  50, 67
+nl                 ******** X G       @  60, 72
+print_board        ******** X G       @  55, 82
+read_board         ******** X G       @  54, 77
+size               00000000 R G data  @  28, 56
+solve_puzzle       ******** X G       @  58, 84

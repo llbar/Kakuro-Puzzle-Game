@@ -1,0 +1,5 @@
+******************
+**  CROSS SUMS  **
+******************
+
+Illegal input value, Cross Sums terminating

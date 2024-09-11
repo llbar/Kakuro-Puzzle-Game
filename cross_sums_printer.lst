@@ -1,0 +1,338 @@
+   1 0000               #
+   2 0000               # FILE:         $Id$
+   3 0000               # AUTHOR:       Lachlan Bartle
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #	Prints the puzzle board for the cross_sums puzzle.
+   7 0000               # 
+   8 0000               
+   9 0000               #-------------------------------
+  10 0000               
+  11 0000               #
+  12 0000               # DATA AREAS
+  13 0000               #
+  14 0000               
+  15 0000                       .data
+  16 0000               #-------------------------------
+  17 0000               
+  18 0000               #
+  19 0000               # CODE AREAS
+  20 0000               #
+  21 0000               
+  22 0000               	.globl  size
+  23 0000               	.globl	board
+  24 0000                       .globl  print_board
+  25 0000                       .globl  nl
+  26 0000                       
+  27 0000                       .align  0
+  28 0000                       
+  29 0000               backslash: 
+  30 0000 5C00    	        .asciiz "\\" 
+  31 0002                       
+  32 0002               bar: 
+  33 0002 7C00    	        .asciiz "|"
+  34 0004                       
+  35 0004               pound: 
+  36 0004 2300    	        .asciiz "#"
+  37 0006                       
+  38 0006               space: 
+  39 0006 2000    	        .asciiz " "
+  40 0008               
+  41 0008               border: 
+  42 0008 2D2D2D2B	        .asciiz	"---+"
+          00      
+  43 000d                       
+  44 000d               plus: 
+  45 000d 2B00    	        .asciiz "+"
+  46 000f                       
+  47 000f               nl: 
+  48 000f 0A00    	        .asciiz "\n"
+  49 0011               
+  50 0011               #-------------------------------
+  51 0011               #
+  52 0011               # CONSTANTS
+  53 0011               #
+  54 0011               
+  55 0011               PRINT_INT = 	1
+  56 0011               PRINT_STRING = 	4
+  57 0011               READ_INT = 	5
+  58 0011               EXIT = 		10
+  59 0011               
+  60 0000                       .text
+  61 0000                       .align  2
+  62 0000               
+  63 0000               #-------------------------------
+  64 0000               
+  65 0000               # Prints the border pattern
+  66 0000               print_border:
+  67 0000 34020004		li	$v0,PRINT_STRING
+  68 0004 3C040000		la	$a0, plus
+     0008 34840000
+  69 000c 0000000C		syscall
+  70 0010 3C010000		lw	$a1, size
+     0014 8C250000
+  71 0018               
+  72 0018               print_border_next:
+  73 0018 3C040000		la	$a0,border
+     001c 34840000
+  74 0020 0000000C		syscall
+  75 0024 20A5FFFF		addi	$a1, $a1, -1
+  76 0028 14A0FFFB		bne	$a1, $zero, print_border_next
+  77 002c 03E00008		jr	$ra
+  78 0030                
+  79 0030               # Prints space
+  80 0030               print_space:
+  81 0030 34020004		li	$v0,PRINT_STRING
+  82 0034 3C040000		la	$a0,space
+     0038 34840000
+  83 003c 0000000C		syscall
+  84 0040 03E00008		jr	$ra
+  85 0044                
+  86 0044               # Prints a backslash
+  87 0044               print_backslash:
+  88 0044 34020004		li	$v0,PRINT_STRING
+  89 0048 3C040000		la	$a0,backslash
+     004c 34840000
+  90 0050 0000000C		syscall
+  91 0054 03E00008		jr	$ra
+  92 0058                
+  93 0058               # Prints |
+  94 0058               print_bar:
+  95 0058 34020004		li	$v0,PRINT_STRING
+  96 005c 3C040000		la	$a0,bar
+     0060 34840000
+  97 0064 0000000C		syscall
+  98 0068 03E00008		jr	$ra
+  99 006c                
+ 100 006c               # Prints newline
+ 101 006c               print_nl:
+ 102 006c 34020004		li	$v0,PRINT_STRING
+ 103 0070 3C040000		la	$a0,nl
+     0074 34840000
+ 104 0078 0000000C		syscall
+ 105 007c 03E00008		jr	$ra
+ 106 0080                
+ 107 0080               # Prints #
+ 108 0080               print_pound:
+ 109 0080 34020004		li	$v0,PRINT_STRING
+ 110 0084 3C040000		la	$a0,pound
+     0088 34840000
+ 111 008c 0000000C		syscall
+ 112 0090 03E00008		jr	$ra
+ 113 0094                 
+ 114 0094               # Initalize printing the board
+ 115 0094               print_board:
+ 116 0094 23BDFFFC		addi	$sp, $sp, -4
+ 117 0098 AFBF0000		sw	$ra, 0($sp)
+ 118 009c 3C080000		la	$t0, board
+     00a0 35080000
+ 119 00a4 3C010000		lw	$t1, size
+     00a8 8C290000
+ 120 00ac 01205021	 	move	$t2, $t1
+ 121 00b0 01005821		move	$t3, $t0 
+ 122 00b4 01206021		move	$t4, $t1	
+ 123 00b8 0C000000		jal	print_border   # Call the function to 
+ 124 00bc                                              # print the border
+ 125 00bc               
+ 126 00bc               print_row_loop:
+ 127 00bc 1140006E		beq	$t2, $zero, print_done
+ 128 00c0 0C00001B		jal	print_nl
+ 129 00c4 0C000016		jal	print_bar
+ 130 00c8                
+ 131 00c8               across_loop:
+ 132 00c8 1180001D		beq	$t4, $zero ,line_print
+ 133 00cc               
+ 134 00cc               across_clue:
+ 135 00cc 8D0F0000		lw	$t7, 0($t0)
+ 136 00d0 11E0000C		beq	$t7, $zero, blank_across
+ 137 00d4 0C000011		jal	print_backslash
+ 138 00d8 34010064		div	$t6, $t7, 100
+     00dc 01E1001A
+     00e0 00007012
+ 139 00e4 340D0063		li	$t5, 99
+ 140 00e8 11CD000F		beq	$t6, $t5, block_across
+ 141 00ec 29CD000A		slti	$t5, $t6, 10
+ 142 00f0 15A00008		bne	$t5, $zero, across_value
+ 143 00f4 34020001		li	$v0, PRINT_INT
+ 144 00f8 01C02021		move	$a0, $t6
+ 145 00fc 0000000C		syscall
+ 146 0100 0800004C		j	across_done
+ 147 0104               
+ 148 0104               blank_across:
+ 149 0104 0C00000C		jal	print_space
+ 150 0108 0C00000C		jal	print_space
+ 151 010c 0C00000C		jal	print_space
+ 152 0110 0800004C		j	across_done
+ 153 0114               
+ 154 0114               across_value:
+ 155 0114 0C000020		jal	print_pound
+ 156 0118 34020001		li	$v0, PRINT_INT
+ 157 011c 01C02021		move	$a0, $t6       # Print the across clue
+ 158 0120 0000000C		syscall
+ 159 0124 0800004C		j	across_done
+ 160 0128               
+ 161 0128               block_across:
+ 162 0128 0C000020		jal	print_pound
+ 163 012c 0C000020		jal	print_pound
+ 164 0130               
+ 165 0130               across_done:
+ 166 0130 0C000016		jal	print_bar      # Print bar for column separation
+ 167 0134 218CFFFF		addi	$t4, $t4, -1
+ 168 0138 21080008		addi	$t0, $t0, 8    # Move to next cell
+ 169 013c 08000032		j	across_loop
+ 170 0140               	
+ 171 0140               line_print:
+ 172 0140 01604021		move	$t0, $t3
+ 173 0144 3C180000	        la      $t8, size
+     0148 37180000
+ 174 014c 8F0C0000		lw	$t4, 0($t8)
+ 175 0150 0C00001B		jal	print_nl
+ 176 0154 0C000016		jal	print_bar
+ 177 0158                
+ 178 0158               line_loop:
+ 179 0158 8D0F0000		lw	$t7, 0($t0)
+ 180 015c 11E00004		beq	$t7, $zero, line_value
+ 181 0160 0C000020		jal	print_pound
+ 182 0164 0C000011		jal	print_backslash
+ 183 0168 0C000020		jal	print_pound
+ 184 016c 08000065		j	line_done
+ 185 0170               
+ 186 0170               line_value:
+ 187 0170 0C00000C		jal	print_space
+ 188 0174 34020001		li	$v0, PRINT_INT
+ 189 0178 8D040004		lw	$a0, 4($t0)
+ 190 017c 10800002		beq	$a0, $zero, line_space
+ 191 0180 0000000C		syscall
+ 192 0184 08000063		j	sp
+ 193 0188                
+ 194 0188               line_space:
+ 195 0188 0C00000C		jal	print_space
+ 196 018c                
+ 197 018c               sp:
+ 198 018c 0C00000C		jal	print_space
+ 199 0190 08000065		j	line_done
+ 200 0194               	
+ 201 0194               line_done:
+ 202 0194 0C000016		jal	print_bar
+ 203 0198 21080008		addi	$t0, $t0, 8
+ 204 019c 218CFFFF		addi	$t4, $t4, -1
+ 205 01a0 11800001		beq	$t4, $zero, down_clue
+ 206 01a4 08000056		j	line_loop
+ 207 01a8               	
+ 208 01a8               down_clue:
+ 209 01a8 01604021		move	$t0, $t3
+ 210 01ac 8D0F0000		lw	$t7, 0($t0)
+ 211 01b0 3C180000	        la      $t8, size
+     01b4 37180000
+ 212 01b8 8F0C0000		lw	$t4, 0($t8)
+ 213 01bc 0C00001B		jal	print_nl
+ 214 01c0 0C000016		jal	print_bar
+ 215 01c4               
+ 216 01c4               down_loop:
+ 217 01c4 8D0F0000		lw	$t7, 0($t0)	
+ 218 01c8 11E00013		beq	$t7, $zero, blank_down
+ 219 01cc 34010064		div	$t7, $t7, 100
+     01d0 01E1001A
+     01d4 00007812
+ 220 01d8 00007810		mfhi	$t7
+ 221 01dc 340D0063		li	$t5, 99
+ 222 01e0 11ED0011		beq	$t7, $t5, down_clue_b
+ 223 01e4 29ED000A		slti	$t5, $t7, 10
+ 224 01e8 15A00005		bne	$t5, $zero, down_value
+ 225 01ec 34020001		li	$v0, PRINT_INT
+ 226 01f0 01E02021		move	$a0, $t7
+ 227 01f4 0000000C		syscall
+ 228 01f8 0C000011		jal	print_backslash
+ 229 01fc 0800008D		j	down_clue_done
+ 230 0200               
+ 231 0200               down_value:
+ 232 0200 0C000020		jal	print_pound
+ 233 0204 34020001		li	$v0, PRINT_INT
+ 234 0208 01E02021		move	$a0, $t7
+ 235 020c 0000000C		syscall
+ 236 0210 0C000011		jal	print_backslash
+ 237 0214 0800008D		j	down_clue_done
+ 238 0218               
+ 239 0218               blank_down:
+ 240 0218 0C00000C		jal	print_space
+ 241 021c 0C00000C		jal	print_space
+ 242 0220 0C00000C		jal	print_space
+ 243 0224 0800008D		j	down_clue_done
+ 244 0228               
+ 245 0228               down_clue_b:
+ 246 0228 0C000020		jal	print_pound
+ 247 022c 0C000020		jal	print_pound
+ 248 0230 0C000011		jal	print_backslash
+ 249 0234               
+ 250 0234               down_clue_done:
+ 251 0234 0C000016		jal	print_bar
+ 252 0238 21080008		addi	$t0, $t0, 8
+ 253 023c 218CFFFF		addi	$t4, $t4, -1
+ 254 0240 11800001		beq	$t4, $zero, row_done
+ 255 0244 08000071		j	down_loop
+ 256 0248               
+ 257 0248               row_done:
+ 258 0248 214AFFFF		addi	$t2, $t2, -1
+ 259 024c 3C180000	        la      $t8, size
+     0250 37180000
+ 260 0254 8F0C0000		lw	$t4, 0($t8)
+ 261 0258 34010008		mul	$t5, $t4, 8
+     025c 01810018
+     0260 00006812
+ 262 0264 016D5820		add	$t3, $t3, $t5
+ 263 0268 01604021		move	$t0, $t3
+ 264 026c 0C00001B		jal	print_nl
+ 265 0270 0C000000		jal	print_border
+ 266 0274 0800002F		j	print_row_loop
+ 267 0278               
+ 268 0278               print_done:
+ 269 0278 0C00001B		jal	print_nl
+ 270 027c 8FBF0000		lw	$ra,0($sp)
+ 271 0280 23BD0004		addi	$sp,$sp,4
+ 272 0284 03E00008		jr	$ra
+
+
+      Name         F  Value   M V Sect.                     References
+-----------------  - -------- - - ----- ---------------------------------------------------
+EXIT                 0000000A =         @   58
+PRINT_INT            00000001 =         @   55, 143, 156, 188, 225, 233
+PRINT_STRING         00000004 =         @   56,  67,  81,  88,  95, 102, 109
+READ_INT             00000005 =         @   57
+across_clue          000000CC R   text  @  134
+across_done          00000130 R   text  @  146, 152, 159, 165
+across_loop          000000C8 R   text  @  131, 169
+across_value         00000114 R   text  @  142, 154
+backslash            00000000 R   data  @   29,  89
+bar                  00000002 R   data  @   32,  96
+blank_across         00000104 R   text  @  136, 148
+blank_down           00000218 R   text  @  218, 239
+block_across         00000128 R   text  @  140, 161
+board                ******** X G       @   23, 118
+border               00000008 R   data  @   41,  73
+down_clue            000001A8 R   text  @  205, 208
+down_clue_b          00000228 R   text  @  222, 245
+down_clue_done       00000234 R   text  @  229, 237, 243, 250
+down_loop            000001C4 R   text  @  216, 255
+down_value           00000200 R   text  @  224, 231
+line_done            00000194 R   text  @  184, 199, 201
+line_loop            00000158 R   text  @  178, 206
+line_print           00000140 R   text  @  132, 171
+line_space           00000188 R   text  @  190, 194
+line_value           00000170 R   text  @  180, 186
+nl                   0000000F R G data  @   25,  47, 103
+plus                 0000000D R   data  @   44,  68
+pound                00000004 R   data  @   35, 110
+print_backslash      00000044 R   text  @   87, 137, 182, 228, 236, 248
+print_bar            00000058 R   text  @   94, 129, 166, 176, 202, 214, 251
+print_board          00000094 R G text  @   24, 115
+print_border         00000000 R   text  @   66, 123, 265
+print_border_next    00000018 R   text  @   72,  76
+print_done           00000278 R   text  @  127, 268
+print_nl             0000006C R   text  @  101, 128, 175, 213, 264, 269
+print_pound          00000080 R   text  @  108, 155, 162, 163, 181, 183, 232, 246, 247
+print_row_loop       000000BC R   text  @  126, 266
+print_space          00000030 R   text  @   80, 149, 150, 151, 187, 195, 198, 240, 241, 242
+row_done             00000248 R   text  @  254, 257
+size                 ******** X G       @   22,  70, 119, 173, 211, 259
+sp                   0000018C R   text  @  192, 197
+space                00000006 R   data  @   38,  82

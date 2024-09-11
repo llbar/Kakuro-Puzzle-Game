@@ -1,0 +1,156 @@
+Load map
+Module entry point: 0x00400b28
+
+Module:  cross_sums.obj
+ Text segment:  84 bytes, load point 0x00400000
+ Data segment:  1280 bytes, load point 0x10000000
+ Symbols:
+                     Name Section Mode    Value
+                     size   Data   RG  0x10000000
+                     main   Text   RG  0x00400000
+               init_board   Data   R   0x100004ef
+                   banner   Data   R   0x100004b4
+                 READ_INT          A   0x00000005
+             PRINT_STRING          A   0x00000004
+                    board   Data   RG  0x10000004
+                     EXIT          A   0x0000000a
+                PRINT_INT          A   0x00000001
+
+Module:  cross_sums_board.obj
+ Text segment:  312 bytes, load point 0x00400054
+ Data segment:  96 bytes, load point 0x10000500
+ Symbols:
+                     Name Section Mode    Value
+             invalid_size   Data   R   0x10000500
+               read_board   Text   RG  0x00400054
+                 READ_INT          A   0x00000005
+             PRINT_STRING          A   0x00000004
+            illegal_input   Data   R   0x1000052c
+                     EXIT          A   0x0000000a
+      print_illegal_input   Text   R   0x004000ec
+              check_input   Text   R   0x00400104
+                PRINT_INT          A   0x00000001
+                     done   Text   R   0x00400188
+                done_read   Text   R   0x004000c8
+       print_invalid_size   Text   R   0x004000d4
+          read_board_loop   Text   R   0x0040009c
+
+Module:  cross_sums_printer.obj
+ Text segment:  648 bytes, load point 0x0040018c
+ Data segment:  24 bytes, load point 0x10000560
+ Symbols:
+                     Name Section Mode    Value
+                backslash   Data   R   0x10000560
+                print_bar   Text   R   0x004001e4
+                       nl   Data   RG  0x1000056f
+              across_loop   Text   R   0x00400254
+               print_done   Text   R   0x00400404
+              print_pound   Text   R   0x0040020c
+                    space   Data   R   0x10000566
+                 READ_INT          A   0x00000005
+                down_loop   Text   R   0x00400350
+              across_clue   Text   R   0x00400258
+               down_value   Text   R   0x0040038c
+                line_done   Text   R   0x00400320
+             block_across   Text   R   0x004002b4
+           print_row_loop   Text   R   0x00400248
+             PRINT_STRING          A   0x00000004
+                down_clue   Text   R   0x00400334
+             print_border   Text   R   0x0040018c
+        print_border_next   Text   R   0x004001a4
+               line_value   Text   R   0x004002fc
+                   border   Data   R   0x10000568
+              print_space   Text   R   0x004001bc
+              across_done   Text   R   0x004002bc
+               line_space   Text   R   0x00400314
+                     EXIT          A   0x0000000a
+                      bar   Data   R   0x10000562
+          print_backslash   Text   R   0x004001d0
+                       sp   Text   R   0x00400318
+              down_clue_b   Text   R   0x004003b4
+                PRINT_INT          A   0x00000001
+               blank_down   Text   R   0x004003a4
+               line_print   Text   R   0x004002cc
+                 print_nl   Text   R   0x004001f8
+                    pound   Data   R   0x10000564
+             across_value   Text   R   0x004002a0
+                     plus   Data   R   0x1000056d
+           down_clue_done   Text   R   0x004003c0
+                 row_done   Text   R   0x004003d4
+             blank_across   Text   R   0x00400290
+                line_loop   Text   R   0x004002e4
+              print_board   Text   RG  0x00400220
+
+Module:  cross_sums_solver.obj
+ Text segment:  1808 bytes, load point 0x00400414
+ Data segment:  48 bytes, load point 0x10000578
+ Symbols:
+                     Name Section Mode    Value
+         check_horizontal   Text   R   0x00400750
+                     cell   Data   RG  0x10000578
+  check_column_duplicates   Text   R   0x00400918
+          find_empty_cell   Text   RG  0x00400614
+     has_empty_cells_loop   Text   R   0x004005b8
+      vertical_duplicates   Text   R   0x00400988
+               check_goal   Text   R   0x00400580
+               empty_cell   Data   RG  0x10000580
+              revert_move   Text   R   0x004004d0
+                 load_reg   Text   R   0x00400520
+          last_horizontal   Text   R   0x0040076c
+                     undo   Text   R   0x004004b8
+     find_prev_empty_loop   Text   R   0x00400680
+          found_duplicate   Text   R   0x0040099c
+             solve_puzzle   Text   RG  0x00400414
+                incr_loop   Text   R   0x00400488
+     validate_column_loop   Text   R   0x00400808
+       horizontal_loop_rt   Text   R   0x00400760
+            rd_outer_loop   Text   R   0x004009d0
+               block_clue   Text   R   0x00400a1c
+        validate_row_loop   Text   R   0x004006d8
+            validate_move   Text   R   0x004005dc
+                 cell_val   Data   RG  0x1000057c
+             PRINT_STRING          A   0x00000004
+          find_lower_wall   Text   R   0x00400ab8
+     find_empty_cell_done   Text   R   0x00400640
+          validate_column   Text   R   0x004007cc
+                 is_empty   Text   R   0x004005d4
+                done_here   Text   R   0x004004c0
+             validate_row   Text   R   0x00400694
+          find_right_wall   Text   R   0x00400a54
+                 not_goal   Text   R   0x00400468
+            no_duplicates   Text   R   0x00400990
+        solve_puzzle_loop   Text   R   0x00400424
+         done_column_loop   Text   R   0x0040084c
+            last_vertical   Text   R   0x004008ac
+            done_row_loop   Text   R   0x00400700
+                     EXIT          A   0x0000000a
+          impossible_soln   Text   R   0x00400568
+           find_left_wall   Text   R   0x00400a30
+    horizontal_duplicates   Text   R   0x00400a0c
+            load_half_reg   Text   R   0x0040054c
+     check_row_duplicates   Text   R   0x004009a8
+          has_empty_cells   Text   R   0x004005a0
+            cd_inner_loop   Text   R   0x00400968
+            cd_outer_loop   Text   R   0x0040094c
+         apply_next_value   Text   R   0x00400480
+               board_done   Data   R   0x10000598
+                PRINT_INT          A   0x00000001
+      impossible_soln_msg   Data   R   0x10000584
+            rd_inner_loop   Text   R   0x004009ec
+            lower_wall_rt   Text   R   0x00400b08
+          find_prev_empty   Text   R   0x00400654
+           check_vertical   Text   R   0x0040089c
+            block_clue_rt   Text   R   0x00400a28
+          find_upper_wall   Text   R   0x00400a9c
+     find_empty_cell_loop   Text   R   0x00400628
+
+Module:  r2k_startup.obj
+ Text segment:  64 bytes, load point 0x00400b24
+ Data segment:  8 bytes, load point 0x100005a8
+ Symbols:
+                     Name Section Mode    Value
+              __heap_size   Data   RG  0x100005ac
+                SYS_EXIT2          A   0x00000011
+                 SYS_SBRK          A   0x00000009
+           __r2k__entry__   Text   RG  0x00400b28
+               __heap_ptr   Data   RG  0x100005a8

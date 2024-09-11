@@ -1,0 +1,709 @@
+   1 0000               #
+   2 0000               # FILE:         $Id$
+   3 0000               # AUTHOR:       Lachlan Bartle
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #	This program replicates a cross sums puzzle.
+   7 0000               #       This file is the solver algorithm of that puzzle
+   8 0000               #       using backracking.
+   9 0000               
+  10 0000               #-------------------------------
+  11 0000               
+  12 0000               #
+  13 0000               # CONSTANTS
+  14 0000               #
+  15 0000               
+  16 0000               PRINT_INT =     1
+  17 0000               PRINT_STRING =  4
+  18 0000               EXIT = 	        10
+  19 0000               
+  20 0000               #-------------------------------
+  21 0000               
+  22 0000               #
+  23 0000               # DATA AREAS
+  24 0000               #
+  25 0000               	.data
+  26 0000               	.align  0
+  27 0000               
+  28 0000               cell:
+  29 0000 00000000	        .word   board
+  30 0004                       
+  31 0004               cell_val:
+  32 0004 00000000	        .word   0
+  33 0008                       
+  34 0008               empty_cell:
+  35 0008 00000000	        .word   0
+  36 000c                       
+  37 000c               impossible_soln_msg:
+  38 000c 496D706F	        .asciiz "Impossible Puzzle\n\n"
+          73736962
+          6C652050
+          757A7A6C
+          650A0A00
+  39 0020                       
+  40 0020               board_done:
+  41 0020 46696E61	        .asciiz	"Final Puzzle\n\n"
+          6C205075
+          7A7A6C65
+          0A0A00  
+  42 002f                       
+  43 002f               #-------------------------------
+  44 002f               
+  45 002f               #
+  46 002f               # CODE AREAS
+  47 002f               #
+  48 0000               	.text			   # this is program code
+  49 0000               	.align  2		   # instructions must be on word
+  50 0000                                                  # boundary
+  51 0000                       .globl  size
+  52 0000                       .globl  find_empty_cell
+  53 0000                       .globl  solve_puzzle
+  54 0000                       .globl  cell             
+  55 0000                       .globl  empty_cell
+  56 0000                       .globl  cell_val
+  57 0000                       .globl  nl
+  58 0000                       .globl  print_board
+  59 0000                       .globl  board
+  60 0000                       
+  61 0000               #-------------------------------
+  62 0000               
+  63 0000               # Entry point for solving the puzzle    
+  64 0000               solve_puzzle:
+  65 0000 23BDFFF8		addi	$sp, $sp, -8
+  66 0004 AFBF0000		sw	$ra, 0($sp)
+  67 0008 AFB10004		sw	$s1, 4($sp)
+  68 000c 03A09821		move	$s3, $sp
+  69 0010                
+  70 0010               # Main loop for solving the puzzle
+  71 0010               solve_puzzle_loop:
+  72 0010 0C00005B		jal	check_goal
+  73 0014 1040000F		beq	$v0, $zero, not_goal
+  74 0018 34020004	 	li	$v0, PRINT_STRING
+  75 001c 3C040000		la	$a0, nl
+     0020 34840000
+  76 0024 0000000C		syscall
+  77 0028 34020004		li	$v0, PRINT_STRING
+  78 002c 3C040000		la	$a0, board_done
+     0030 34840000
+  79 0034 0000000C		syscall
+  80 0038 0C000000		jal	print_board
+  81 003c 34020004		li	$v0, PRINT_STRING
+  82 0040 3C040000		la	$a0, nl
+     0044 34840000
+  83 0048 0000000C		syscall
+  84 004c 3402000A		li	$v0, EXIT
+  85 0050 0000000C		syscall
+  86 0054                
+  87 0054               not_goal:
+  88 0054 0C00001B		jal	apply_next_value	
+  89 0058 08000004		j	solve_puzzle_loop
+  90 005c 8FB10004		lw	$s1, 4($sp)
+  91 0060 8FBF0000		lw	$ra, 0($sp)
+  92 0064 23BD0008		addi	$sp, $sp, 8
+  93 0068 03E00008		jr	$ra
+  94 006c                
+  95 006c               # Apply the next value to the puzzle, or go back to previous
+  96 006c               apply_next_value:
+  97 006c 23BDFFFC		addi	$sp, $sp, -4
+  98 0070 AFBF0000		sw	$ra, 0($sp)
+  99 0074                
+ 100 0074               incr_loop:
+ 101 0074 3C010000		lw	$t0, cell
+     0078 8C280000
+ 102 007c 8D090004		lw	$t1, 4($t0)
+ 103 0080 340A0009		li	$t2, 9
+ 104 0084 112A0007		beq	$t1, $t2, undo
+ 105 0088 21290001		addi	$t1, $t1, 1
+ 106 008c AD090004		sw	$t1, 4($t0)
+ 107 0090 3C010000		sw	$t0, cell
+     0094 AC280000
+ 108 0098 0C000072		jal	validate_move
+ 109 009c 1040FFF5		beq	$v0, $zero, incr_loop
+ 110 00a0 0800002B		j	done_here
+ 111 00a4                
+ 112 00a4               # Undo the last move
+ 113 00a4               undo:
+ 114 00a4               	
+ 115 00a4 0C00002F		jal	revert_move
+ 116 00a8 0800001D		j	incr_loop
+ 117 00ac                
+ 118 00ac               # End of applying values, find next empty cell
+ 119 00ac               done_here:
+ 120 00ac 0C000080		jal	find_empty_cell
+ 121 00b0 8FBF0000		lw	$ra, 0($sp)
+ 122 00b4 23BD0004		addi	$sp, $sp, 4
+ 123 00b8 03E00008		jr	$ra 
+ 124 00bc                
+ 125 00bc               # Revert the last move 
+ 126 00bc               revert_move:
+ 127 00bc 23BDFFDC		addi	$sp, $sp, -36
+ 128 00c0 AFBF0000		sw	$ra, 0($sp)
+ 129 00c4 AFAF0004		sw	$t7, 4($sp)
+ 130 00c8 AFAE0008		sw	$t6, 8($sp)
+ 131 00cc AFAD000C		sw	$t5, 12($sp)
+ 132 00d0 AFAC0010		sw	$t4, 16($sp)
+ 133 00d4 AFAB0014		sw	$t3, 20($sp)
+ 134 00d8 AFAA0018		sw	$t2, 24($sp)
+ 135 00dc AFA9001C		sw	$t1, 28($sp)
+ 136 00e0 AFA80020		sw	$t0, 32($sp)
+ 137 00e4 3C010000		lw	$t0, cell
+     00e8 8C280000
+ 138 00ec 8D090004		lw	$t1, 4($t0)
+ 139 00f0 00004821		move	$t1, $zero
+ 140 00f4 AD090004		sw	$t1, 4($t0)
+ 141 00f8 3C010000		sw	$t0, cell
+     00fc AC280000
+ 142 0100 0C000090		jal	find_prev_empty
+ 143 0104 0C000043		jal     load_reg
+ 144 0108 03E00008		jr	$ra   
+ 145 010c                          
+ 146 010c               # Making my life easier (loading registers)
+ 147 010c               load_reg:
+ 148 010c 8FBF0000	        lw	$ra, 0($sp)
+ 149 0110 8FAF0004		lw	$t7, 4($sp)
+ 150 0114 8FAE0008		lw	$t6, 8($sp)
+ 151 0118 8FAD000C		lw	$t5, 12($sp)
+ 152 011c 8FAC0010		lw	$t4, 16($sp)
+ 153 0120 8FAB0014		lw	$t3, 20($sp)
+ 154 0124 8FAA0018		lw	$t2, 24($sp)
+ 155 0128 8FA9001C		lw	$t1, 28($sp)
+ 156 012c 8FA80020		lw	$t0, 32($sp)
+ 157 0130 23BD0024		addi	$sp, $sp, 36
+ 158 0134 03E00008		jr	$ra
+ 159 0138                
+ 160 0138               load_half_reg:
+ 161 0138 8FAF0000	        lw	$t7, 0($sp)
+ 162 013c 8FAE0004		lw	$t6, 4($sp)
+ 163 0140 8FAD0008		lw	$t5, 8($sp)
+ 164 0144 8FAC000C		lw	$t4, 12($sp)
+ 165 0148 8FBF0010	        lw	$ra, 16($sp)
+ 166 014c 23BD0014		addi	$sp, $sp, 20
+ 167 0150 03E00008	        jr      $ra
+ 168 0154               
+ 169 0154               # Display message for impossible puzzle   
+ 170 0154               impossible_soln:
+ 171 0154 34020004		li	$v0, PRINT_STRING
+ 172 0158 3C040000		la	$a0, impossible_soln_msg
+     015c 34840000
+ 173 0160 0000000C		syscall
+ 174 0164 3402000A		li	$v0, EXIT
+ 175 0168 0000000C		syscall
+ 176 016c                
+ 177 016c               # Check if the puzzle is solved by searching for 
+ 178 016c               # empty squares
+ 179 016c               check_goal:
+ 180 016c 23BDFFFC		addi	$sp, $sp, -4
+ 181 0170 AFBF0000		sw	$ra, 0($sp)
+ 182 0174 0C000063		jal	has_empty_cells
+ 183 0178 00408821		move	$s1, $v0
+ 184 017c 02201021		move	$v0, $s1
+ 185 0180 8FBF0000		lw	$ra, 0($sp)
+ 186 0184 23BD0004		addi	$sp, $sp, 4
+ 187 0188 03E00008		jr	$ra
+ 188 018c                
+ 189 018c               has_empty_cells:
+ 190 018c 3C080000		la	$t0, board
+     0190 35080000
+ 191 0194 3C010000		lw	$t1, size
+     0198 8C290000
+ 192 019c 01290018		mul	$t1, $t1, $t1
+     01a0 00004812
+ 193 01a4                
+ 194 01a4               has_empty_cells_loop:
+ 195 01a4 1120011B		beq	$t1, $zero, block_clue_rt
+ 196 01a8 8D0A0000		lw	$t2, 0($t0)
+ 197 01ac 8D0B0004		lw	$t3, 4($t0)
+ 198 01b0 114B0003		beq	$t2, $t3, is_empty
+ 199 01b4 2129FFFF		addi	$t1, $t1, -1
+ 200 01b8 21080008		addi	$t0, $t0, 8
+ 201 01bc 08000069		j	has_empty_cells_loop
+ 202 01c0                
+ 203 01c0               is_empty:
+ 204 01c0 00001021		move	$v0, $zero
+ 205 01c4 03E00008		jr	$ra
+ 206 01c8                
+ 207 01c8               # Validate the move
+ 208 01c8               validate_move:
+ 209 01c8 23BDFFFC		addi	$sp, $sp, -4
+ 210 01cc AFBF0000		sw	$ra, 0($sp)
+ 211 01d0 0C0000A0		jal	validate_row
+ 212 01d4 00408821		move	$s1, $v0
+ 213 01d8 0C0000EE		jal	validate_column
+ 214 01dc 02228824		and	$s1, $s1, $v0
+ 215 01e0 0C000165		jal	check_row_duplicates
+ 216 01e4 02228824		and	$s1, $s1, $v0
+ 217 01e8 0C000141		jal	check_column_duplicates
+ 218 01ec 02228824		and	$s1, $s1, $v0
+ 219 01f0 02201021		move	$v0, $s1
+ 220 01f4 8FBF0000		lw	$ra, 0($sp)
+ 221 01f8 23BD0004		addi	$sp, $sp, 4
+ 222 01fc 03E00008		jr	$ra
+ 223 0200                
+ 224 0200               # Find the next empty cell
+ 225 0200               find_empty_cell:
+ 226 0200 3C080000		la	$t0, board
+     0204 35080000
+ 227 0208 8D090000		lw	$t1, 0($t0)
+ 228 020c 8D0B0004		lw	$t3, 4($t0)
+ 229 0210 00005021		move	$t2, $zero
+ 230 0214               
+ 231 0214               find_empty_cell_loop:
+ 232 0214 112B0005		beq	$t1, $t3, find_empty_cell_done
+ 233 0218 21080008		addi	$t0, $t0, 8
+ 234 021c 214A0001		addi	$t2, $t2, 1
+ 235 0220 8D090000		lw	$t1, 0($t0)
+ 236 0224 8D0B0004		lw	$t3, 4($t0)
+ 237 0228 08000085		j	find_empty_cell_loop
+ 238 022c                
+ 239 022c               find_empty_cell_done:
+ 240 022c 3C010000		sw	$t0, cell
+     0230 AC280000
+ 241 0234 3C010000		sw	$t2, cell_val
+     0238 AC2A0000
+ 242 023c 03E00008	        jr      $ra
+ 243 0240               
+ 244 0240               # Find the previous empty cell
+ 245 0240               find_prev_empty:	
+ 246 0240 3C010000		lw	$t0, cell
+     0244 8C280000
+ 247 0248 2108FFF8		addi	$t0, $t0, -8
+ 248 024c 8D090000		lw	$t1, 0($t0)
+ 249 0250 3C010000		lw	$t2, cell_val
+     0254 8C2A0000
+ 250 0258 214AFFFF		addi	$t2, $t2, -1
+ 251 025c 3C010000		lw	$s4, empty_cell
+     0260 8C340000
+ 252 0264 2294FFFF		addi	$s4, $s4, -1
+ 253 0268 128AFFBA		beq	$s4, $t2, impossible_soln
+ 254 026c                
+ 255 026c               find_prev_empty_loop:
+ 256 026c 1120FFEF		beq	$t1, $zero, find_empty_cell_done
+ 257 0270 2108FFF8		addi	$t0, $t0, -8
+ 258 0274 214AFFFF		addi	$t2, $t2, -1
+ 259 0278 8D090000		lw	$t1, 0($t0)
+ 260 027c 0800009B		j	find_prev_empty_loop
+ 261 0280                
+ 262 0280               # Validate a row
+ 263 0280               validate_row:
+ 264 0280 23BDFFDC		addi	$sp, $sp, -36
+ 265 0284 AFBF0000		sw	$ra, 0($sp)
+ 266 0288 AFAF0004		sw	$t7, 4($sp)
+ 267 028c AFAE0008		sw	$t6, 8($sp)
+ 268 0290 AFAD000C		sw	$t5, 12($sp)
+ 269 0294 AFAC0010		sw	$t4, 16($sp)
+ 270 0298 AFAB0014		sw	$t3, 20($sp)
+ 271 029c AFAA0018		sw	$t2, 24($sp)
+ 272 02a0 AFA9001C		sw	$t1, 28($sp)
+ 273 02a4 AFA80020		sw	$t0, 32($sp)  
+ 274 02a8 3C010000		lw	$t0, cell
+     02ac 8C280000
+ 275 02b0 3C010000		lw	$t1, cell_val
+     02b4 8C290000
+ 276 02b8 3C010000		lw	$t2, size
+     02bc 8C2A0000
+ 277 02c0 00006821		move	$t5, $zero
+ 278 02c4                
+ 279 02c4               validate_row_loop:
+ 280 02c4 8D0B0000		lw	$t3, 0($t0)
+ 281 02c8 8D0C0004		lw	$t4, 4($t0)
+ 282 02cc 01AC6820		add	$t5, $t5, $t4
+ 283 02d0 01202021		move	$a0, $t1
+ 284 02d4 8D04FFF8		lw	$a0, -8($t0)
+ 285 02d8 0C000182		jal	block_clue
+ 286 02dc 00406021		move	$t4, $v0
+ 287 02e0 15800002		bne	$t4, $zero, done_row_loop
+ 288 02e4 2108FFF8		addi	$t0, $t0, -8
+ 289 02e8 080000B1		j	validate_row_loop
+ 290 02ec                
+ 291 02ec               done_row_loop:
+ 292 02ec 01004821		move	$t1, $t0
+ 293 02f0 0C0000D6		jal	last_horizontal
+ 294 02f4 00402021		move	$a0, $v0
+ 295 02f8 34020001		li	$v0, PRINT_INT
+ 296 02fc 00801021		move	$v0, $a0
+ 297 0300 01204021		move	$t0, $t1
+ 298 0304 00406021		move	$t4, $v0
+ 299 0308 8D0FFFF8		lw	$t7, -8($t0)
+ 300 030c 34010064		div	$t7, $t7, 100
+     0310 01E1001A
+     0314 00007812
+ 301 0318 01E02021		move	$a0, $t7
+ 302 031c 34020001		li	$v0, PRINT_INT
+ 303 0320 01A02021		move	$a0, $t5
+ 304 0324 34020001		li	$v0, PRINT_INT
+ 305 0328 15800004		bne	$t4, $zero, check_horizontal
+ 306 032c 01AF682A		slt	$t5, $t5, $t7
+ 307 0330 15A00006		bne	$t5, $zero, horizontal_loop_rt
+ 308 0334 00001021		move	$v0, $zero
+ 309 0338 03E00008		jr	$ra	
+ 310 033c                
+ 311 033c               check_horizontal:
+ 312 033c 11AF0003		beq	$t5, $t7, horizontal_loop_rt
+ 313 0340 00001021		move	$v0, $zero	
+ 314 0344 0C000043	        jal     load_reg
+ 315 0348 03E00008	        jr      $ra
+ 316 034c                
+ 317 034c               horizontal_loop_rt:
+ 318 034c 34020001		li	$v0, 1
+ 319 0350 0C000043	        jal     load_reg
+ 320 0354 03E00008		jr	$ra
+ 321 0358                
+ 322 0358               # Find the last horizontal clue in a row
+ 323 0358               last_horizontal:
+ 324 0358 23BDFFEC	        addi	$sp, $sp, -20
+ 325 035c AFAF0000		sw	$t7, 0($sp)
+ 326 0360 AFAE0004		sw	$t6, 4($sp)
+ 327 0364 AFAD0008		sw	$t5, 8($sp)
+ 328 0368 AFAC000C		sw	$t4, 12($sp)
+ 329 036c AFBF0010	        sw	$ra, 16($sp)
+ 330 0370 3C010000		lw	$t5, cell
+     0374 8C2D0000
+ 331 0378 8DAC0000		lw	$t4, 0($t5)
+ 332 037c 8DAD0008		lw	$t5, 8($t5)
+ 333 0380 3C010000		lw	$t6, cell_val
+     0384 8C2E0000
+ 334 0388 100D0002		sne	$t0, $t5, $zero
+     038c 34080001
+     0390 10000001
+     0394 34080000
+ 335 0398 00001021		move	$v0, $zero
+ 336 039c 01C02021		move	$a0, $t6
+ 337 03a0 0C000190		jal	find_right_wall
+ 338 03a4 0040A821		move	$s5, $v0
+ 339 03a8 02A01021		move	$v0, $s5
+ 340 03ac 01021025		or	$v0, $t0, $v0
+ 341 03b0 0C00004E	        jal     load_half_reg
+ 342 03b4 03E00008		jr	$ra
+ 343 03b8                
+ 344 03b8               # Validate a column
+ 345 03b8               validate_column:
+ 346 03b8 23BDFFDC		addi	$sp, $sp, -36
+ 347 03bc AFBF0000		sw	$ra, 0($sp)
+ 348 03c0 AFAF0004		sw	$t7, 4($sp)
+ 349 03c4 AFAE0008		sw	$t6, 8($sp)
+ 350 03c8 AFAD000C		sw	$t5, 12($sp)
+ 351 03cc AFAC0010		sw	$t4, 16($sp)
+ 352 03d0 AFAB0014		sw	$t3, 20($sp)
+ 353 03d4 AFAA0018		sw	$t2, 24($sp)
+ 354 03d8 AFA9001C		sw	$t1, 28($sp)
+ 355 03dc AFA80020		sw	$t0, 32($sp)
+ 356 03e0 3C010000		lw	$t0, cell
+     03e4 8C280000
+ 357 03e8 3C010000		lw	$t1, cell_val
+     03ec 8C290000
+ 358 03f0 00006821		move	$t5, $zero
+ 359 03f4                
+ 360 03f4               validate_column_loop:
+ 361 03f4 8D0B0000		lw	$t3, 0($t0)
+ 362 03f8 8D0C0004		lw	$t4, 4($t0)
+ 363 03fc 01AC6820		add	$t5, $t5, $t4
+ 364 0400 01202021		move	$a0, $t1
+ 365 0404 3C010000		lw	$t2, size
+     0408 8C2A0000
+ 366 040c 34010008		mul	$t2, $t2, 8
+     0410 01410018
+     0414 00005012
+ 367 0418 01002021		move	$a0, $t0
+ 368 041c 008A2022		sub	$a0, $a0, $t2
+ 369 0420 8C840000		lw	$a0, 0($a0)
+ 370 0424 0C000182		jal	block_clue
+ 371 0428 00406021		move	$t4, $v0
+ 372 042c 15800002		bne	$t4, $zero, done_column_loop
+ 373 0430 010A4022		sub	$t0, $t0, $t2
+ 374 0434 080000FD		j	validate_column_loop
+ 375 0438                
+ 376 0438               done_column_loop:
+ 377 0438 0C000126		jal	last_vertical
+ 378 043c 00406021		move	$t4, $v0
+ 379 0440 3C010000		lw	$t2, size
+     0444 8C2A0000
+ 380 0448 34010008		mul	$t2, $t2, 8
+     044c 01410018
+     0450 00005012
+ 381 0454 01407021		move	$t6, $t2
+ 382 0458 01007821		move	$t7, $t0
+ 383 045c 01EE7822		sub	$t7, $t7, $t6
+ 384 0460 8DEF0000		lw	$t7, 0($t7)
+ 385 0464 34010064		rem	$t7, $t7, 100
+     0468 01E1001A
+     046c 00007810
+ 386 0470 15800005		bne	$t4, $zero, check_vertical
+ 387 0474 01AF682A		slt	$t5, $t5, $t7
+ 388 0478 15A0FFB4		bne	$t5, $zero, horizontal_loop_rt
+ 389 047c 00001021		move	$v0, $zero
+ 390 0480 0C000043	        jal     load_reg
+ 391 0484 03E00008		jr	$ra
+ 392 0488                       	
+ 393 0488               check_vertical:
+ 394 0488 11AFFFB0		beq	$t5, $t7, horizontal_loop_rt
+ 395 048c 00001021		move	$v0, $zero	
+ 396 0490 0C000043	        jal     load_reg
+ 397 0494 03E00008		jr	$ra
+ 398 0498                
+ 399 0498               # Find the last vertical clue in a column
+ 400 0498               last_vertical:
+ 401 0498 23BDFFEC	        addi	$sp, $sp, -20
+ 402 049c AFAF0000		sw	$t7, 0($sp)
+ 403 04a0 AFAE0004		sw	$t6, 4($sp)
+ 404 04a4 AFAD0008		sw	$t5, 8($sp)
+ 405 04a8 AFAC000C		sw	$t4, 12($sp)
+ 406 04ac AFBF0010	        sw	$ra, 16($sp)
+ 407 04b0 3C010000		lw	$t7, cell
+     04b4 8C2F0000
+ 408 04b8 3C010000		lw	$t5, size
+     04bc 8C2D0000
+ 409 04c0 34010008		mul	$t5, $t5, 8
+     04c4 01A10018
+     04c8 00006812
+ 410 04cc 01ED7820		add	$t7, $t7, $t5
+ 411 04d0 8DEF0000		lw	$t7, 0($t7)
+ 412 04d4 3C010000		lw	$t6, cell_val
+     04d8 8C2E0000
+ 413 04dc 100F0002		sne	$t7, $t7, $zero
+     04e0 340F0001
+     04e4 10000001
+     04e8 340F0000
+ 414 04ec 00001021		move	$v0, $zero
+ 415 04f0 01C02021		move	$a0, $t6
+ 416 04f4 0C0001A9		jal	find_lower_wall
+ 417 04f8 01E21025		or	$v0, $t7, $v0
+ 418 04fc 0C00004E	        jal     load_half_reg
+ 419 0500 03E00008		jr	$ra
+ 420 0504                
+ 421 0504               # Checks for duplicates in columns
+ 422 0504               check_column_duplicates:	
+ 423 0504 23BDFFEC	        addi	$sp, $sp, -20
+ 424 0508 AFAF0000		sw	$t7, 0($sp)
+ 425 050c AFAE0004		sw	$t6, 4($sp)
+ 426 0510 AFAD0008		sw	$t5, 8($sp)
+ 427 0514 AFAC000C		sw	$t4, 12($sp)
+ 428 0518 AFBF0010	        sw	$ra, 16($sp)
+ 429 051c 3C010000		lw	$t7, cell
+     0520 8C2F0000
+ 430 0524 3C010000		lw	$t3, size
+     0528 8C2B0000
+ 431 052c 2401FFF8		mul	$t3, $t3, -8
+     0530 01610018
+     0534 00005812
+ 432 0538                
+ 433 0538               cd_outer_loop:
+ 434 0538 8DEE0000		lw	$t6, 0($t7)
+ 435 053c 01E06021		move	$t4, $t7
+ 436 0540 018B6020		add	$t4, $t4, $t3
+ 437 0544 01C02021		move	$a0, $t6
+ 438 0548 0C000182		jal	block_clue
+ 439 054c 8DEE0004		lw	$t6, 4($t7)
+ 440 0550 1440000D		bne	$v0, $zero, found_duplicate
+ 441 0554                
+ 442 0554               cd_inner_loop:
+ 443 0554 8D8D0000		lw	$t5, 0($t4)
+ 444 0558 01A02021		move	$a0, $t5
+ 445 055c 0C000182		jal	block_clue
+ 446 0560 14400004		bne	$v0, $zero, vertical_duplicates
+ 447 0564 8D8D0004		lw	$t5, 4($t4)
+ 448 0568 11AE0004		beq	$t5, $t6, no_duplicates
+ 449 056c 018B6020		add	$t4, $t4, $t3
+ 450 0570 08000155		j	cd_inner_loop
+ 451 0574                
+ 452 0574               vertical_duplicates:
+ 453 0574 01EB7820		add	$t7, $t7, $t3
+ 454 0578 0800014E		j	cd_outer_loop
+ 455 057c                
+ 456 057c               no_duplicates:
+ 457 057c 0C00004E	        jal     load_half_reg
+ 458 0580 00001021		move	$v0, $zero
+ 459 0584 03E00008		jr	$ra
+ 460 0588                
+ 461 0588               found_duplicate:
+ 462 0588 0C00004E	        jal     load_half_reg
+ 463 058c 34020001		li	$v0, 1
+ 464 0590 03E00008		jr	$ra    
+ 465 0594               
+ 466 0594               check_row_duplicates:
+ 467 0594 23BDFFEC	        addi	$sp, $sp, -20
+ 468 0598 AFAF0000		sw	$t7, 0($sp)
+ 469 059c AFAE0004		sw	$t6, 4($sp)
+ 470 05a0 AFAD0008		sw	$t5, 8($sp)
+ 471 05a4 AFAC000C		sw	$t4, 12($sp)
+ 472 05a8 AFBF0010	        sw	$ra, 16($sp)	
+ 473 05ac 3C010000		lw	$t7, cell
+     05b0 8C2F0000
+ 474 05b4 3C010000		lw	$t4, cell
+     05b8 8C2C0000
+ 475 05bc                
+ 476 05bc               rd_outer_loop:
+ 477 05bc 8DEE0000		lw	$t6, 0($t7)
+ 478 05c0 01E06021		move	$t4, $t7
+ 479 05c4 218CFFF8		addi	$t4, $t4, -8
+ 480 05c8 01C02021		move	$a0, $t6
+ 481 05cc 0C000182		jal	block_clue
+ 482 05d0 8DEE0004		lw	$t6, 4($t7)
+ 483 05d4 1440FFEC		bne	$v0, $zero, found_duplicate
+ 484 05d8                
+ 485 05d8               rd_inner_loop:
+ 486 05d8 8D8D0000		lw	$t5, 0($t4)
+ 487 05dc 01A02021		move	$a0, $t5
+ 488 05e0 0C000182		jal	block_clue
+ 489 05e4 14400004		bne	$v0, $zero, horizontal_duplicates
+ 490 05e8 8D8D0004		lw	$t5, 4($t4)
+ 491 05ec 11AEFFE3		beq	$t5, $t6, no_duplicates
+ 492 05f0 218CFFF8		addi	$t4, $t4, -8
+ 493 05f4 08000176		j	rd_inner_loop
+ 494 05f8                
+ 495 05f8               # Checks for duplicates in horizontal
+ 496 05f8               horizontal_duplicates:
+ 497 05f8 21EFFFF8		addi	$t7, $t7, -8
+ 498 05fc 0800016F		j	rd_outer_loop
+ 499 0600 0C00015F	        jal     no_duplicates
+ 500 0604 03E00008	        jr      $ra
+ 501 0608                
+ 502 0608               # Check if value is clue
+ 503 0608               block_clue:
+ 504 0608 14800002		bne	$a0, $zero, block_clue_rt
+ 505 060c 00001021		move	$v0, $zero
+ 506 0610 03E00008		jr	$ra
+ 507 0614                
+ 508 0614               block_clue_rt:
+ 509 0614 34020001		li	$v0, 1
+ 510 0618 03E00008		jr	$ra
+ 511 061c               
+ 512 061c               # Find the left wall for a row
+ 513 061c               find_left_wall:
+ 514 061c 1080FFFD		beq	$a0, $zero, block_clue_rt
+ 515 0620 3C010000		lw	$t2, size
+     0624 8C2A0000
+ 516 0628 008A001A		div	$v0, $a0, $t2
+     062c 00001012
+ 517 0630 00001010		mfhi	$v0
+ 518 0634 1040FFF7		beq	$v0, $zero, block_clue_rt
+ 519 0638 00001021		move	$v0, $zero
+ 520 063c 03E00008		jr	$ra
+ 521 0640                
+ 522 0640               # Find the right wall for a row
+ 523 0640               find_right_wall:
+ 524 0640 3C010000		lw	$t7, cell_val
+     0644 8C2F0000
+ 525 0648 3C010000		lw	$t2, size
+     064c 8C2A0000
+ 526 0650 01EA001A		div	$t6, $t7, $t2
+     0654 00007012
+ 527 0658 00007010		mfhi	$t6
+ 528 065c 34020001		li	$v0, PRINT_INT
+ 529 0660 01C02021		move	$a0, $t6
+ 530 0664 00007821		move	$t7, $zero
+ 531 0668 3C010000		lw	$t7, size
+     066c 8C2F0000
+ 532 0670 21EFFFFF		addi	$t7, $t7, -1
+ 533 0674 34020001		li	$v0, PRINT_INT
+ 534 0678 01E02021		move	$a0, $t7
+ 535 067c 11CFFFE5		beq	$t6, $t7, block_clue_rt
+ 536 0680 00001021		move	$v0, $zero
+ 537 0684 03E00008		jr	$ra
+ 538 0688                
+ 539 0688               # Check if square is on the upper wall
+ 540 0688               find_upper_wall:
+ 541 0688 3C010000		lw	$t7, size
+     068c 8C2F0000
+ 542 0690 00807021		move	$t6, $a0
+ 543 0694 01CA102A		slt	$v0, $t6, $t2
+ 544 0698 1440FFDE		bne	$v0, $zero, block_clue_rt
+ 545 069c 00001021		move	$v0, $zero 
+ 546 06a0 03E00008		jr	$ra
+ 547 06a4                
+ 548 06a4               # Check if square is on the lower wall
+ 549 06a4               find_lower_wall:
+ 550 06a4 23BDFFF0		addi	$sp,$sp,-16	
+ 551 06a8 AFAF0000		sw	$t7, 0($sp)
+ 552 06ac AFAE0004		sw	$t6, 4($sp)
+ 553 06b0 AFAD0008		sw	$t5, 8($sp)
+ 554 06b4 AFAC000C		sw	$t4, 12($sp)
+ 555 06b8 00807021		move	$t6, $a0
+ 556 06bc 3C010000		lw	$t7, size
+     06c0 8C2F0000
+ 557 06c4 01EF0018		mul	$t5, $t7, $t7
+     06c8 00006812
+ 558 06cc 01AF6822		sub	$t5, $t5, $t7
+ 559 06d0 01CD102A		slt	$v0, $t6, $t5
+ 560 06d4 10400007		beq	$v0, $zero, lower_wall_rt
+ 561 06d8 00001021		move	$v0, $zero
+ 562 06dc 8FAF0000	        lw	$t7, 0($sp)
+ 563 06e0 8FAE0004		lw	$t6, 4($sp)
+ 564 06e4 8FAD0008		lw	$t5, 8($sp)
+ 565 06e8 8FAC000C		lw	$t4, 12($sp)
+ 566 06ec 23BD0010		addi	$sp, $sp, 16
+ 567 06f0 03E00008		jr	$ra
+ 568 06f4                
+ 569 06f4               lower_wall_rt:
+ 570 06f4 34020001		li	$v0, 1
+ 571 06f8 8FAF0000	        lw	$t7, 0($sp)
+ 572 06fc 8FAE0004		lw	$t6, 4($sp)
+ 573 0700 8FAD0008		lw	$t5, 8($sp)
+ 574 0704 8FAC000C		lw	$t4, 12($sp)
+ 575 0708 23BD0010		addi	$sp, $sp, 16
+ 576 070c 03E00008		jr	$ra
+
+
+         Name            F  Value   M V Sect.                               References
+-----------------------  - -------- - - ----- -----------------------------------------------------------------------
+EXIT                       0000000A =         @   18,  84, 174
+PRINT_INT                  00000001 =         @   16, 295, 302, 304, 528, 533
+PRINT_STRING               00000004 =         @   17,  74,  77,  81, 171
+apply_next_value           0000006C R   text  @   88,  96
+block_clue                 00000608 R   text  @  285, 370, 438, 445, 481, 488, 503
+block_clue_rt              00000614 R   text  @  195, 504, 508, 514, 518, 535, 544
+board                      ******** X G       @   29,  59, 190, 226
+board_done                 00000020 R   data  @   40,  78
+cd_inner_loop              00000554 R   text  @  442, 450
+cd_outer_loop              00000538 R   text  @  433, 454
+cell                       00000000 R G data  @   28,  54, 101, 107, 137, 141, 240, 246, 274, 330, 356, 407, 429, 473
+                                              @  474
+cell_val                   00000004 R G data  @   31,  56, 241, 249, 275, 333, 357, 412, 524
+check_column_duplicates    00000504 R   text  @  217, 422
+check_goal                 0000016C R   text  @   72, 179
+check_horizontal           0000033C R   text  @  305, 311
+check_row_duplicates       00000594 R   text  @  215, 466
+check_vertical             00000488 R   text  @  386, 393
+done_column_loop           00000438 R   text  @  372, 376
+done_here                  000000AC R   text  @  110, 119
+done_row_loop              000002EC R   text  @  287, 291
+empty_cell                 00000008 R G data  @   34,  55, 251
+find_empty_cell            00000200 R G text  @   52, 120, 225
+find_empty_cell_done       0000022C R   text  @  232, 239, 256
+find_empty_cell_loop       00000214 R   text  @  231, 237
+find_left_wall             0000061C R   text  @  513
+find_lower_wall            000006A4 R   text  @  416, 549
+find_prev_empty            00000240 R   text  @  142, 245
+find_prev_empty_loop       0000026C R   text  @  255, 260
+find_right_wall            00000640 R   text  @  337, 523
+find_upper_wall            00000688 R   text  @  540
+found_duplicate            00000588 R   text  @  440, 461, 483
+has_empty_cells            0000018C R   text  @  182, 189
+has_empty_cells_loop       000001A4 R   text  @  194, 201
+horizontal_duplicates      000005F8 R   text  @  489, 496
+horizontal_loop_rt         0000034C R   text  @  307, 312, 317, 388, 394
+impossible_soln            00000154 R   text  @  170, 253
+impossible_soln_msg        0000000C R   data  @   37, 172
+incr_loop                  00000074 R   text  @  100, 109, 116
+is_empty                   000001C0 R   text  @  198, 203
+last_horizontal            00000358 R   text  @  293, 323
+last_vertical              00000498 R   text  @  377, 400
+load_half_reg              00000138 R   text  @  160, 341, 418, 457, 462
+load_reg                   0000010C R   text  @  143, 147, 314, 319, 390, 396
+lower_wall_rt              000006F4 R   text  @  560, 569
+nl                         ******** X G       @   57,  75,  82
+no_duplicates              0000057C R   text  @  448, 456, 491, 499
+not_goal                   00000054 R   text  @   73,  87
+print_board                ******** X G       @   58,  80
+rd_inner_loop              000005D8 R   text  @  485, 493
+rd_outer_loop              000005BC R   text  @  476, 498
+revert_move                000000BC R   text  @  115, 126
+size                       ******** X G       @   51, 191, 276, 365, 379, 408, 430, 515, 525, 531, 541, 556
+solve_puzzle               00000000 R G text  @   53,  64
+solve_puzzle_loop          00000010 R   text  @   71,  89
+undo                       000000A4 R   text  @  104, 113
+validate_column            000003B8 R   text  @  213, 345
+validate_column_loop       000003F4 R   text  @  360, 374
+validate_move              000001C8 R   text  @  108, 208
+validate_row               00000280 R   text  @  211, 263
+validate_row_loop          000002C4 R   text  @  279, 289
+vertical_duplicates        00000574 R   text  @  446, 452

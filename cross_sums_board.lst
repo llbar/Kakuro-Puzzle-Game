@@ -1,0 +1,189 @@
+   1 0000               #
+   2 0000               # FILE:         $Id$
+   3 0000               # AUTHOR:       Lachlan Bartle
+   4 0000               #
+   5 0000               # DESCRIPTION:
+   6 0000               #	Reads in and creates a board for the cross_sums puzzle.
+   7 0000               #       Prints message if the input is bad.
+   8 0000               
+   9 0000               #-------------------------------
+  10 0000               
+  11 0000               # DATA AREAS
+  12 0000               #
+  13 0000               
+  14 0000               	.data
+  15 0000                
+  16 0000               invalid_size:  
+  17 0000 496E7661	        .asciiz "Invalid board size, Cross Sums terminating\n"
+          6C696420
+          626F6172
+          64207369
+          7A652C20
+          43726F73
+  18 002c               illegal_input: 
+  19 002c 496C6C65	        .asciiz "Illegal input value, Cross Sums terminating\n"
+          67616C20
+          696E7075
+          74207661
+          6C75652C
+          2043726F
+  20 0059                       
+  21 0059               #-------------------------------
+  22 0059               
+  23 0059               #
+  24 0059               # CODE AREAS
+  25 0059               #
+  26 0059               
+  27 0059               	.globl  size
+  28 0059               	.globl	board
+  29 0059                       .globl  read_board
+  30 0059               
+  31 0059               #-------------------------------
+  32 0059               
+  33 0059               #
+  34 0059               # CONSTANTS
+  35 0059               #
+  36 0059               
+  37 0000               .text
+  38 0000               READ_INT =      5
+  39 0000               PRINT_INT =     1
+  40 0000               PRINT_STRING =  4
+  41 0000               EXIT = 	        10
+  42 0000               
+  43 0000                
+  44 0000               #-------------------------------
+  45 0000               
+  46 0000               # Read the board for the puzzle        
+  47 0000               read_board:
+  48 0000 23BDFFFC		addi	$sp, $sp, -4       # Allocate space on the stack                                      # for return address
+  49 0004 AFBF0000		sw	$ra, 0($sp)        # Save the return address
+  50 0008 34020005		li	$v0, READ_INT      # Load system call for reading                                     # an integer
+  51 000c 0000000C		syscall
+  52 0010 3C010000		sw	$v0, size          # Store the size of the board
+     0014 AC220000
+  53 0018 00404021		move	$t0, $v0           # Copy the size to $t0
+  54 001c 2909000D		slti	$t1, $t0, 13       # Check if the size is less 
+  55 0020                                                  # than 13
+  56 0020 34010001		sgt	$t2, $t0, 1        # Check if the size is 
+     0024 0028502A
+  57 0028                                                  # greater than 1
+  58 0028 012A4024		and	$t0, $t1, $t2      # Check if both conditions 
+  59 002c                                                  # are true
+  60 002c 11000014		beq	$t0, $zero, print_invalid_size
+  61 0030               	# If size is invalid print error message and terminate
+  62 0030 00420018		mul	$t0, $v0, $v0      # Calculate the total number 
+     0034 00004012
+  63 0038                                                  # of elements in the board
+  64 0038               
+  65 0038 00405821		move	$t3, $v0           # Copy the size to $t5
+  66 003c               
+  67 003c 00004821		move	$t1, $zero         # Initialize loop counter to 0
+  68 0040 3C0F0000		la	$t7, board         # Load address of the 
+     0044 35EF0000
+  69 0048                                                  # board array
+  70 0048                
+  71 0048               read_board_loop:
+  72 0048 1128000A	        beq	$t1, $t0, done_read
+  73 004c                                                  # Exit loop if all elements 
+  74 004c                                                  # are read
+  75 004c               
+  76 004c 34020005		li	$v0, READ_INT
+  77 0050 0000000C		syscall
+  78 0054               	
+  79 0054 00405021		move	$t2, $v0
+  80 0058 01402021		move	$a0, $t2
+  81 005c 0C00002C		jal 	check_input
+  82 0060               
+  83 0060 ADEA0000		sw	$t2, 0($t7)        # Store the integer in the 
+  84 0064                                                  # board array
+  85 0064 ADE00004		sw	$zero, 4($t7)      # Store 0 in the second word 
+  86 0068                                                  # for each element
+  87 0068               
+  88 0068               
+  89 0068 21290001		addi	$t1, $t1, 1        # Increment loop counter
+  90 006c 21EF0008		addi	$t7, $t7, 8        # Move to the next element
+  91 0070                                                  # in the board array
+  92 0070 08000012		j	read_board_loop
+  93 0074                
+  94 0074               done_read:
+  95 0074 8FBF0000	        lw      $ra, 0($sp)        # Restore the return address
+  96 0078 23BD0004	        addi    $sp, $sp, 4
+  97 007c 03E00008	        jr      $ra
+  98 0080                       
+  99 0080               # Print error message for invalid board size 
+ 100 0080               # Terminates after printing invalid message
+ 101 0080               print_invalid_size:
+ 102 0080 34020004	        li      $v0, PRINT_STRING  # Load system call for printing
+ 103 0084 3C040000	        la      $a0, invalid_size  # Load address of the string
+     0088 34840000
+ 104 008c 0000000C	        syscall                    # Print the string
+ 105 0090 3402000A	        li      $v0, EXIT          # Load system call for exit
+ 106 0094 0000000C	        syscall
+ 107 0098               
+ 108 0098               # Print error message for illegal input value and terminate    
+ 109 0098               print_illegal_input:
+ 110 0098 34020004	        li      $v0, PRINT_STRING  # Load system call for printing
+ 111 009c 3C040000	        la      $a0, illegal_input # Load address of the string
+     00a0 34840000
+ 112 00a4 0000000C	        syscall
+ 113 00a8 3402000A	        li      $v0, EXIT          # Load system call for exit
+ 114 00ac 0000000C	        syscall
+ 115 00b0               
+ 116 00b0               # Function to validate input value
+ 117 00b0               check_input:
+ 118 00b0 10800020		beq	$a0, $zero, done
+ 119 00b4 00807021		move	$t6, $a0
+ 120 00b8 00006021		move	$t4, $zero
+ 121 00bc 34010064		div	$t4, $t6, 100
+     00c0 01C1001A
+     00c4 00006012
+ 122 00c8 298D002E		slti	$t5, $t4, 46
+ 123 00cc 34010000		sgt	$t6, $t6, 0
+     00d0 002E702A
+ 124 00d4 34010063		seq	$t4, $t4, 99
+     00d8 102C0002
+     00dc 340C0000
+     00e0 10000001
+     00e4 340C0001
+ 125 00e8 01AC6825		or	$t5, $t5, $t4
+ 126 00ec 01AE6824		and	$t5, $t5, $t6
+ 127 00f0 11A0FFE9		beq	$t5, $zero, print_illegal_input
+ 128 00f4 00807021		move	$t6, $a0
+ 129 00f8 00006021		move	$t4, $zero
+ 130 00fc 34010064		rem	$t4, $t6, 100
+     0100 01C1001A
+     0104 00006010
+ 131 0108 298D002E		slti	$t5, $t4, 46
+ 132 010c 34010000		sgt	$t6, $t6, 0
+     0110 002E702A
+ 133 0114 34010063		seq	$t4, $t4, 99
+     0118 102C0002
+     011c 340C0000
+     0120 10000001
+     0124 340C0001
+ 134 0128 01AC6825		or	$t5, $t5, $t4
+ 135 012c 01AE6824		and	$t5, $t5, $t6
+ 136 0130 11A0FFD9		beq	$t5, $zero, print_illegal_input
+ 137 0134                
+ 138 0134               # Finished
+ 139 0134               done:	
+ 140 0134 03E00008		jr $ra
+
+
+       Name          F  Value   M V Sect.    References
+-------------------  - -------- - - ----- ----------------
+EXIT                   0000000A =         @   41, 105, 113
+PRINT_INT              00000001 =         @   39
+PRINT_STRING           00000004 =         @   40, 102, 110
+READ_INT               00000005 =         @   38,  50,  76
+board                  ******** X G       @   28,  68
+check_input            000000B0 R   text  @   81, 117
+done                   00000134 R   text  @  118, 139
+done_read              00000074 R   text  @   72,  94
+illegal_input          0000002C R   data  @   18, 111
+invalid_size           00000000 R   data  @   16, 103
+print_illegal_input    00000098 R   text  @  109, 127, 136
+print_invalid_size     00000080 R   text  @   60, 101
+read_board             00000000 R G text  @   29,  47
+read_board_loop        00000048 R   text  @   71,  92
+size                   ******** X G       @   27,  52
